@@ -1,0 +1,11 @@
+{
+  "domain": "todoist",
+  "name": "Todoist",
+  "config_flow": true,
+  "documentation": "",
+  "requirements": ["todoist-api-python==2.0.2"],
+  "dependencies": [],
+  "codeowners": ["@MrGauz"],
+  "iot_class": "cloud_polling",
+  "version": "0.1.0"
+}
