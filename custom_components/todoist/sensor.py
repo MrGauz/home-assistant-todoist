@@ -55,6 +55,7 @@ class TodoistSensor(SensorEntity):
         self.config: dict = config
         self.project_id = config.get(CONF_PROJECT_ID)
         self.project_name = config.get(CONF_PROJECT_NAME)
+        self.api_token = api_token
         self.api = TodoistAPI(api_token)
 
     @property
@@ -72,7 +73,8 @@ class TodoistSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         return {
-            "tasks": [task.to_dict() for task in self.tasks or []]
+            "tasks": [task.to_dict() for task in self.tasks or []],
+            "api_token": self.api_token
         }
 
     def update(self):

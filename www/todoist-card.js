@@ -13,10 +13,11 @@ class TodoistCard extends HTMLElement {
 
         const config = this.config;
         const maxEntries = config.max_entries || 10;
-        const showStopName = config.show_stop_name || true;
+        const showProjectName = config.show_project_name || true;
         const entityIds = config.entity ? [config.entity] : config.entities || [];
 
         let content = "";
+        let apiToken = "";
 
         for (const entityId of entityIds) {
             const entity = hass.states[entityId];
@@ -24,36 +25,37 @@ class TodoistCard extends HTMLElement {
                 throw new Error("Entity State Unavailable");
             }
 
-            if (showStopName) {
+            if (!apiToken) {
+                apiToken = entity.attributes.api_token
+            }
+
+            if (showProjectName) {
                 // TODO: link to todoist
                 content += `<div class="project">${entity.attributes.friendly_name}</div>`;
             }
 
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-            ]
-            let timetable = []
+            ];
+            let timetable = [];
             entity.attributes.tasks.slice(0, maxEntries).forEach(task => {
-                let dueDate = ''
+                let dueDate = '';
                 if (task.due && task.due.date) {
-                    let parsedDate = new Date(task.due.date)
-                    dueDate += parsedDate.getDate() + ' ' + months[parsedDate.getMonth()]
+                    let parsedDate = new Date(task.due.date);
+                    dueDate += parsedDate.getDate() + ' ' + months[parsedDate.getMonth()];
                 }
                 if (task.due && task.due.datetime != null) {
-                    let parsedDate = new Date(task.due.datetime)
-                    dueDate += ' ' + parsedDate.getHours() + ':' + parsedDate.getMinutes().toString().padStart(2, '0')
+                    let parsedDate = new Date(task.due.datetime);
+                    dueDate += ' ' + parsedDate.getHours() + ':' + parsedDate.getMinutes().toString().padStart(2, '0');
                 }
 
-                let listItem = `<li class="task" id="${task.id}">
-                    <div>
-                        <div>${task.content}</div>`
+                let listItem = `<li class="task" id="${task.id}"><div><div>${task.content}</div>`;
                 if (dueDate) {
-                    listItem += `<div class="due-date">${dueDate}</div>`
+                    listItem += `<div class="due-date">${dueDate}</div>`;
                 }
-                listItem += `</div>
-                </li>`
+                listItem += `</div></li>`;
 
-                timetable.push(listItem)
+                timetable.push(listItem);
             });
 
             content += `<ul class="tasks" id="todoist-tasks-${entityId}">` + timetable.join("\n") + `</ul>`;
@@ -66,8 +68,14 @@ class TodoistCard extends HTMLElement {
             taskElement.addEventListener('click',
                 function (ev) {
                     const parent = ev.target.closest('.task');
-                    if (parent) {
+                    if (parent && !parent.classList.contains('checked')) {
                         parent.classList.toggle('checked');
+
+                        const closeTaskUrl = `https://api.todoist.com/rest/v2/tasks/${parent.id}/close`;
+                        let xhr = new XMLHttpRequest();
+                        xhr.open("POST", closeTaskUrl, true);
+                        xhr.setRequestHeader('Authorization', `Bearer ${apiToken}`);
+                        xhr.send();
                     }
                 }, false);
         })
@@ -82,7 +90,7 @@ class TodoistCard extends HTMLElement {
 
         const card = document.createElement('ha-card');
         const content = document.createElement('div');
-        const style = document.createElement('style')
+        const style = document.createElement('style');
 
         style.textContent = `
             * {
