@@ -4,9 +4,8 @@ import logging
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 import voluptuous as vol
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import ConfigType
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import DiscoveryInfoType
 from todoist_api_python.api import TodoistAPI
 from todoist_api_python.models import Task
 
@@ -28,7 +27,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_PROJECTS): [
             {
                 vol.Required(CONF_PROJECT_ID): int,
-                vol.Optional(CONF_PROJECT_NAME, default=None): str
+                vol.Optional(CONF_PROJECT_NAME, default=""): str
             }
         ]
     }
@@ -60,13 +59,7 @@ class TodoistSensor(SensorEntity):
 
     @property
     def name(self) -> str:
-        if self.project_name is None:
-            try:
-                self.project_name = self.api.get_project(project_id=self.project_id)
-            except Exception as error:
-                _LOGGER.warning(f"Could not find a project with id {self.project_id}", error)
-
-        return self.project_name or self.project_id
+        return self.project_name or f"Project ID: {self.project_id}"
 
     @property
     def icon(self) -> str:
@@ -83,7 +76,16 @@ class TodoistSensor(SensorEntity):
         }
 
     def update(self):
+        self.project_name = self.fetch_project_name() or self.project_name
         self.tasks = self.fetch_tasks()
+
+    def fetch_project_name(self) -> str:
+        if not self.project_name:
+            try:
+                return self.api.get_project(project_id=self.project_id).name
+            except Exception as error:
+                _LOGGER.warning(f"Could not find a project with id {self.project_id}", error)
+                return ''
 
     def fetch_tasks(self) -> list[Task]:
         try:
