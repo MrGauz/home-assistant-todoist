@@ -2,10 +2,10 @@
   "domain": "todoist",
   "name": "Todoist",
   "config_flow": true,
-  "documentation": "",
+  "documentation": "https://github.com/MrGauz/home-assistant-todoist",
   "requirements": ["todoist-api-python==2.0.2"],
-  "dependencies": [],
   "codeowners": ["@MrGauz"],
   "iot_class": "cloud_polling",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "loggers": ["todoist"]
 }

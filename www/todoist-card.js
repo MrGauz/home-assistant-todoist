@@ -10,6 +10,7 @@ class TodoistCard extends HTMLElement {
 
     /* This is called every time sensor is updated */
     set hass(hass) {
+        this._hass = hass;
 
         const config = this.config;
         const maxEntries = config.max_entries || 10;
@@ -71,11 +72,17 @@ class TodoistCard extends HTMLElement {
                     if (parent && !parent.classList.contains('checked')) {
                         parent.classList.toggle('checked');
 
-                        const closeTaskUrl = `https://api.todoist.com/rest/v2/tasks/${parent.id}/close`;
-                        let xhr = new XMLHttpRequest();
-                        xhr.open("POST", closeTaskUrl, true);
-                        xhr.setRequestHeader('Authorization', `Bearer ${apiToken}`);
-                        xhr.send();
+                        let deleteTasks = JSON.parse(hass.states['input_text.todoist_delete_project_id'].state);
+                        deleteTasks.tasks.push(parent.id)
+
+                        hass.callService("input_text", "set_value", {
+                            entity_id: 'input_text.todoist_delete_project_id',
+                            value: JSON.stringify(deleteTasks),
+                        }).then(
+                            function (response) {
+                            }, function (error) {
+                                console.log("Failed to push new task ID to input_text.todoist_delete_project_id")
+                            });
                     }
                 }, false);
         })
@@ -198,6 +205,11 @@ class TodoistCard extends HTMLElement {
         card.appendChild(content);
 
         root.appendChild(card);
+    }
+
+    // The height of the card.
+    getCardSize() {
+        return 5; // TODO: adapt to # entities
     }
 }
 

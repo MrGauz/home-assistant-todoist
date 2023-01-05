@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 DOMAIN = "todoist"
-SCAN_INTERVAL = timedelta(seconds=90)
+SCAN_INTERVAL = timedelta(seconds=30)
 
 CONF_API_TOKEN = "api_token"
 CONF_PROJECTS = "projects"
