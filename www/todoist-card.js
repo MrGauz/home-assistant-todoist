@@ -1,5 +1,8 @@
 // Todoist Project Card
 
+const INPUT_TEXT_ENTITY_ID = 'input_text.todoist_closed_tasks';
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 class TodoistCard extends HTMLElement {
     constructor() {
         super();
@@ -10,15 +13,12 @@ class TodoistCard extends HTMLElement {
 
     /* This is called every time sensor is updated */
     set hass(hass) {
-        this._hass = hass;
-
         const config = this.config;
         const maxEntries = config.max_entries || 10;
         const showProjectName = config.show_project_name || true;
         const entityIds = config.entity ? [config.entity] : config.entities || [];
 
         let content = "";
-        let apiToken = "";
 
         for (const entityId of entityIds) {
             const entity = hass.states[entityId];
@@ -26,65 +26,62 @@ class TodoistCard extends HTMLElement {
                 throw new Error("Entity State Unavailable");
             }
 
-            if (!apiToken) {
-                apiToken = entity.attributes.api_token
-            }
-
             if (showProjectName) {
                 // TODO: link to todoist
                 content += `<div class="project">${entity.attributes.friendly_name}</div>`;
             }
 
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-            ];
-            let timetable = [];
+            let tasks = [];
             entity.attributes.tasks.slice(0, maxEntries).forEach(task => {
-                let dueDate = '';
+                let dueTo = '';
                 if (task.due && task.due.date) {
+                    // Parse due date
                     let parsedDate = new Date(task.due.date);
-                    dueDate += parsedDate.getDate() + ' ' + months[parsedDate.getMonth()];
+                    dueTo += MONTHS[parsedDate.getMonth()] + ' ' + parsedDate.getDate();
                 }
                 if (task.due && task.due.datetime != null) {
+                    // Parse due time
                     let parsedDate = new Date(task.due.datetime);
-                    dueDate += ' ' + parsedDate.getHours() + ':' + parsedDate.getMinutes().toString().padStart(2, '0');
+                    dueTo += ' ' + parsedDate.getHours() + ':' + parsedDate.getMinutes().toString().padStart(2, '0');
                 }
 
-                let listItem = `<li class="task" id="${task.id}"><div><div>${task.content}</div>`;
-                if (dueDate) {
-                    listItem += `<div class="due-date">${dueDate}</div>`;
+                let taskElement = `<li class="task" id="${task.id}"><div><div>${task.content}</div>`;
+                if (dueTo) {
+                    taskElement += `<div class="due-date">${dueTo}</div>`;
                 }
-                listItem += `</div></li>`;
+                taskElement += `</div></li>`;
 
-                timetable.push(listItem);
+                tasks.push(taskElement);
             });
 
-            content += `<ul class="tasks" id="todoist-tasks-${entityId}">` + timetable.join("\n") + `</ul>`;
+            content += `<ul class="tasks" id="todoist-tasks-${entityId}">` + tasks.join("\n") + `</ul>`;
         }
 
         this.shadowRoot.getElementById('container').innerHTML = content;
 
-        let taskElements = this.shadowRoot.querySelectorAll('[id^="todoist-tasks-"]');
-        taskElements.forEach(taskElement => {
-            taskElement.addEventListener('click',
-                function (ev) {
-                    const parent = ev.target.closest('.task');
-                    if (parent && !parent.classList.contains('checked')) {
-                        parent.classList.toggle('checked');
+        let projectElements = this.shadowRoot.querySelectorAll('[id^="todoist-tasks-"]');
+        projectElements.forEach(projectElement => {
+            projectElement.childNodes.forEach(taskElement => {
+                if (hass.states[INPUT_TEXT_ENTITY_ID].state === taskElement.id) {
+                    taskElement.classList.add('checked');
+                }
 
-                        let deleteTasks = JSON.parse(hass.states['input_text.todoist_delete_project_id'].state);
-                        deleteTasks.tasks.push(parent.id)
-
-                        hass.callService("input_text", "set_value", {
-                            entity_id: 'input_text.todoist_delete_project_id',
-                            value: JSON.stringify(deleteTasks),
-                        }).then(
-                            function (response) {
-                            }, function (error) {
-                                console.log("Failed to push new task ID to input_text.todoist_delete_project_id")
-                            });
-                    }
-                }, false);
+                taskElement.addEventListener('click',
+                    function (ev) {
+                        const parent = ev.target.closest('.task');
+                        if (parent && !parent.classList.contains('checked')) {
+                            // Disallow unselecting a task ^
+                            hass.callService("input_text", "set_value", {
+                                entity_id: INPUT_TEXT_ENTITY_ID,
+                                value: parent.id
+                            }).then(
+                                function (response) {},
+                                function (error) {
+                                    console.log(`Failed to push new task ID to ${INPUT_TEXT_ENTITY_ID}`)
+                                });
+                        }
+                    }, false);
+            });
         })
     }
 

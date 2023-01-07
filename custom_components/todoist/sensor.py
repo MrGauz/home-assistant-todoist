@@ -3,7 +3,8 @@ import logging
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 import voluptuous as vol
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from todoist_api_python.api import TodoistAPI
@@ -16,7 +17,8 @@ from .const import (
     CONF_PROJECTS,
     CONF_PROJECT_ID,
     CONF_PROJECT_NAME,
-    DEFAULT_ICON
+    DEFAULT_ICON,
+    INPUT_TEXT_ENTITY_ID
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -73,8 +75,7 @@ class TodoistSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         return {
-            "tasks": [task.to_dict() for task in self.tasks or []],
-            "api_token": self.api_token
+            "tasks": [task.to_dict() for task in self.tasks or []]
         }
 
     def update(self):
@@ -97,3 +98,31 @@ class TodoistSensor(SensorEntity):
             return []
 
         return tasks
+
+    async def async_added_to_hass(self) -> None:
+        """Complete integration setup after being added to hass."""
+
+        @callback
+        async def close_task(event):
+            close_task_id = self.hass.states.get(INPUT_TEXT_ENTITY_ID).state
+            if close_task_id:
+                try:
+                    await self.hass.async_add_executor_job(close_task_api, close_task_id)
+                except Exception as e:
+                    _LOGGER.error("ERROR async_update(): " + str(e))
+                    return
+
+                await self.hass.async_add_executor_job(self.hass.services.call, 'homeassistant', 'update_entity',
+                                                       {"entity_id": "sensor.test_project"})
+
+        self.async_on_remove(
+            async_track_state_change_event(
+                self.hass, [INPUT_TEXT_ENTITY_ID], close_task
+            )
+        )
+
+        def close_task_api(task_id: str) -> None:
+            try:
+                self.api.close_task(task_id=task_id)
+            except Exception as error:
+                _LOGGER.error(f"Could not close task {task_id}", error)
