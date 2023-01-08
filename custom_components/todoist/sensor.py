@@ -57,6 +57,7 @@ class TodoistSensor(SensorEntity):
         self.config: dict = config
         self.project_id = config.get(CONF_PROJECT_ID)
         self.project_name = config.get(CONF_PROJECT_NAME)
+        self.project_url = ''
         self.api_token = api_token
         self.api = TodoistAPI(api_token)
 
@@ -75,29 +76,31 @@ class TodoistSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         return {
-            "tasks": [task.to_dict() for task in self.tasks or []]
+            "project_url": self.project_url,
+            "tasks": [task.to_dict() for task in self.tasks or []],
         }
 
     def update(self):
-        self.project_name = self.fetch_project_name() or self.project_name
+        self.project_name = self.fetch_project()[0] or self.project_name
+        self.project_url = self.fetch_project()[1]
         self.tasks = self.fetch_tasks()
 
-    def fetch_project_name(self) -> str:
-        if not self.project_name:
-            try:
-                return self.api.get_project(project_id=self.project_id).name
-            except Exception as error:
-                _LOGGER.warning(f"Could not find a project with id {self.project_id}", error)
-                return ''
+    def fetch_project(self) -> (str, str):
+        """Load Todoist project's name and URL"""
+        try:
+            project = self.api.get_project(project_id=self.project_id)
+            return project.name, project.url
+        except Exception as error:
+            _LOGGER.warning(f"Could not load a project with id {self.project_id}", error)
+            return '', ''
 
     def fetch_tasks(self) -> list[Task]:
+        """Load Todoist project's tasks"""
         try:
-            tasks = self.api.get_tasks(project_id=self.project_id)
+            return self.api.get_tasks(project_id=self.project_id)
         except Exception as error:
             _LOGGER.error(f"Could not load tasks for project {self.project_id}", error)
             return []
-
-        return tasks
 
     async def async_added_to_hass(self) -> None:
         """Complete integration setup after being added to hass."""

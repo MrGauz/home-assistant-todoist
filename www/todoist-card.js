@@ -28,17 +28,22 @@ class TodoistCard extends HTMLElement {
             }
 
             if (showProjectName) {
-                // TODO: link to todoist
                 const projectName = document.createElement('div');
                 projectName.className = 'project';
                 projectName.innerText = entity.attributes.friendly_name;
+
+                if (entity.attributes.project_url) {
+                    projectName.addEventListener('click', function () {
+                        window.open(entity.attributes.project_url, '_blank').focus();
+                    });
+                }
+
                 root.appendChild(projectName);
             }
 
             const tasks = document.createElement('ul');
             tasks.className = 'tasks';
             tasks.id = 'todoist-tasks-' + entityId;
-
 
             entity.attributes.tasks.slice(0, maxEntries).forEach(apiTask => {
                 let dueToText = '';
@@ -59,17 +64,20 @@ class TodoistCard extends HTMLElement {
                 if (apiTask.id === hass.states[INPUT_TEXT_ENTITY_ID].state) {
                     task.classList.add('checked');
                 }
+                const taskInner = document.createElement('div');
 
                 const text = document.createElement('div');
                 text.innerText = apiTask.content;
-                task.appendChild(text);
+                taskInner.appendChild(text);
 
                 if (dueToText) {
                     const dueTo = document.createElement('div');
                     dueTo.className = 'due-date';
                     dueTo.innerText = dueToText;
-                    task.appendChild(dueTo);
+                    taskInner.appendChild(dueTo);
                 }
+
+                task.appendChild(taskInner);
 
                 task.addEventListener('click', event => {
                     const task = event.target.closest('.task');
