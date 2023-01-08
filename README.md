@@ -78,7 +78,7 @@ Having configured the sensor, it's time to setup the widget.
    entities:
      - sensor.tasks_for_today # Swap to your sensor ID
        max_entries: 10 # Optional, number of tasks to show (default: 10)
-   	show_project_name: true # Optional, show or hide the project name (default: true)
+       show_project_name: true # Optional, show or hide the project name (default: true)
    ``````
 
 ## 🎨 Styling

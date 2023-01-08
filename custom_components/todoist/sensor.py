@@ -105,6 +105,11 @@ class TodoistSensor(SensorEntity):
             _LOGGER.error(f"Could not load tasks for project {self.project_id}", e)
             return []
 
+        # First show those without a due date, then sorted by due date
+        tasks_undue = list(filter(lambda t: not t.due, tasks))
+        tasks_due = sorted(list(filter(lambda t: t.due, tasks)), key=lambda t: (t.due.date, t.due.datetime))
+        tasks = [*tasks_undue, *tasks_due]
+
         # Close tasks in case original API call failed
         closed_tasks = self.hass.states.get(INPUT_TEXT_ALL_CLOSED).state
         if closed_tasks:
