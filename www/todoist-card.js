@@ -1,6 +1,6 @@
 // Todoist Project Card
 
-const INPUT_TEXT_ENTITY_ID = 'input_text.todoist_closed_tasks';
+const INPUT_TEXT_ENTITY_ID = 'input_text.todoist_closed_task';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 class TodoistCard extends HTMLElement {
@@ -50,7 +50,7 @@ class TodoistCard extends HTMLElement {
                 if (apiTask.due && apiTask.due.date) {
                     // Parse due date
                     let parsedDate = new Date(apiTask.due.date);
-                    dueToText += MONTHS[parsedDate.getMonth()] + ' ' + parsedDate.getDate();
+                    dueToText += parsedDate.getDate() + ' ' + MONTHS[parsedDate.getMonth()];
                 }
                 if (apiTask.due && apiTask.due.datetime != null) {
                     // Parse due time

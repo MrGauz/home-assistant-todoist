@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 DOMAIN = "todoist"
-SCAN_INTERVAL = timedelta(seconds=30)
+SCAN_INTERVAL = timedelta(seconds=60)
 
 CONF_API_TOKEN = "api_token"
 CONF_PROJECTS = "projects"
@@ -10,4 +10,4 @@ CONF_PROJECT_NAME = "display_name"
 
 DEFAULT_ICON = "mdi:format-list-checkbox"
 
-INPUT_TEXT_ENTITY_ID = "input_text.todoist_closed_tasks"
+INPUT_TEXT_ENTITY_ID = "input_text.todoist_closed_task"
