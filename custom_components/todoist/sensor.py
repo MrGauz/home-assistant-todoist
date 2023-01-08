@@ -130,7 +130,7 @@ class TodoistSensor(SensorEntity):
                 try:
                     await self.hass.async_add_executor_job(close_task_api, last_closed['task_id'])
                 except Exception as e:
-                    _LOGGER.error("ERROR async_update(): ", e)
+                    _LOGGER.error(f"Could not close task {last_closed['task_id']}", e)
                     return
 
                 await self.hass.async_add_executor_job(
