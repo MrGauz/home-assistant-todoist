@@ -12,14 +12,15 @@ from todoist_api_python.api import TodoistAPI
 from todoist_api_python.models import Task
 
 from .const import (
-    DOMAIN, # noqa
-    SCAN_INTERVAL, # noqa
+    DOMAIN,  # noqa
+    SCAN_INTERVAL,  # noqa
     CONF_API_TOKEN,
     CONF_PROJECTS,
     CONF_PROJECT_ID,
     CONF_PROJECT_NAME,
     DEFAULT_ICON,
-    INPUT_TEXT_LAST_CLOSED
+    INPUT_TEXT_LAST_CLOSED,
+    INPUT_TEXT_ALL_CLOSED
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -91,17 +92,31 @@ class TodoistSensor(SensorEntity):
         try:
             project = self.api.get_project(project_id=self.project_id)
             return project.name, project.url
-        except Exception as error:
-            _LOGGER.warning(f"Could not load a project with id {self.project_id}", error)
+        except Exception as e:
+            _LOGGER.warning(f"Could not load a project with id {self.project_id}", e)
             return '', ''
 
     def fetch_tasks(self) -> list[Task]:
         """Load Todoist project's tasks"""
         try:
-            return self.api.get_tasks(project_id=self.project_id)
-        except Exception as error:
-            _LOGGER.error(f"Could not load tasks for project {self.project_id}", error)
+            tasks = self.api.get_tasks(project_id=self.project_id)
+        except Exception as e:
+            _LOGGER.error(f"Could not load tasks for project {self.project_id}", e)
             return []
+
+        # Close tasks in case original API call failed
+        closed_tasks = self.hass.states.get(INPUT_TEXT_ALL_CLOSED).state
+        if closed_tasks:
+            closed_tasks = json.loads(closed_tasks)
+            for task in tasks[:]:
+                if task.id in closed_tasks:
+                    try:
+                        self.api.close_task(task_id=task.id)
+                        tasks.remove(task)
+                    except Exception as e:
+                        _LOGGER.error(f"Could not close task {task.id}", e)
+
+        return tasks
 
     async def async_added_to_hass(self) -> None:
         """Complete integration setup after being added to hass."""
@@ -115,7 +130,7 @@ class TodoistSensor(SensorEntity):
                 try:
                     await self.hass.async_add_executor_job(close_task_api, last_closed['task_id'])
                 except Exception as e:
-                    _LOGGER.error("ERROR async_update(): " + str(e))
+                    _LOGGER.error("ERROR async_update(): ", e)
                     return
 
                 await self.hass.async_add_executor_job(
@@ -131,5 +146,5 @@ class TodoistSensor(SensorEntity):
         def close_task_api(task_id: str) -> None:
             try:
                 self.api.close_task(task_id=task_id)
-            except Exception as error:
-                _LOGGER.error(f"Could not close task {task_id}", error)
+            except Exception as e:
+                _LOGGER.error(f"Could not close task {task_id}", e)
