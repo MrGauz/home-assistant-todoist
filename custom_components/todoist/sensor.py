@@ -1,4 +1,5 @@
 """Todoist integration."""
+import json
 import logging
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
@@ -11,14 +12,14 @@ from todoist_api_python.api import TodoistAPI
 from todoist_api_python.models import Task
 
 from .const import (
-    DOMAIN,
-    SCAN_INTERVAL,
+    DOMAIN, # noqa
+    SCAN_INTERVAL, # noqa
     CONF_API_TOKEN,
     CONF_PROJECTS,
     CONF_PROJECT_ID,
     CONF_PROJECT_NAME,
     DEFAULT_ICON,
-    INPUT_TEXT_ENTITY_ID
+    INPUT_TEXT_LAST_CLOSED
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -107,23 +108,23 @@ class TodoistSensor(SensorEntity):
 
         @callback
         async def close_task(event):
-            state = self.hass.states.get(INPUT_TEXT_ENTITY_ID).state
+            state = self.hass.states.get(INPUT_TEXT_LAST_CLOSED).state
             if state:
-                close_task_sensor_id, close_task_id = state.split(':')
+                last_closed = json.loads(state)
 
                 try:
-                    await self.hass.async_add_executor_job(close_task_api, close_task_id)
+                    await self.hass.async_add_executor_job(close_task_api, last_closed['task_id'])
                 except Exception as e:
                     _LOGGER.error("ERROR async_update(): " + str(e))
                     return
 
                 await self.hass.async_add_executor_job(
-                    self.hass.services.call, 'homeassistant', 'update_entity', {"entity_id": close_task_sensor_id}
+                    self.hass.services.call, 'homeassistant', 'update_entity', {"entity_id": last_closed['sensor_id']}
                 )
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [INPUT_TEXT_ENTITY_ID], close_task
+                self.hass, [INPUT_TEXT_LAST_CLOSED], close_task
             )
         )
 

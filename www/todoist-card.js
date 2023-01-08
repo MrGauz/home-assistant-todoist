@@ -1,6 +1,7 @@
 // Todoist Project Card
 
-const INPUT_TEXT_ENTITY_ID = 'input_text.todoist_closed_task';
+const INPUT_TEXT_LAST_CLOSED = 'input_text.todoist_last_closed_task';
+const INPUT_TEXT_ALL_CLOSED = 'input_text.todoist_all_closed_tasks';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 class TodoistCard extends HTMLElement {
@@ -61,8 +62,9 @@ class TodoistCard extends HTMLElement {
                 const task = document.createElement('li');
                 task.id = apiTask.id;
                 task.classList.add('task');
-                if (hass.states[INPUT_TEXT_ENTITY_ID].state
-                    && apiTask.id === hass.states[INPUT_TEXT_ENTITY_ID].state.split(':')[1]) {
+
+                const closedTasks = JSON.parse(hass.states[INPUT_TEXT_ALL_CLOSED].state || '[]');
+                if (closedTasks.includes(apiTask.id)) {
                     task.classList.add('checked');
                 }
                 const taskInner = document.createElement('div');
@@ -84,9 +86,25 @@ class TodoistCard extends HTMLElement {
                     const task = event.target.closest('.task');
                     if (task && !task.classList.contains('checked')) {
                         // Disallow unselecting a task ^
+
+                        // Pass data to sensor to close the task
+                        const lastClosed = {"task_id": task.id, "sensor_id": entityId};
                         hass.callService("input_text", "set_value", {
-                            entity_id: INPUT_TEXT_ENTITY_ID,
-                            value: `${entityId}:${task.id}`
+                            entity_id: INPUT_TEXT_LAST_CLOSED,
+                            value: JSON.stringify(lastClosed)
+                        });
+
+                        // Add task_id to closed tasks' pool to display as checked despite UI refreshes
+                        const closedTasksState = hass.states[INPUT_TEXT_ALL_CLOSED].state || '[]';
+                        let closedTasks = JSON.parse(closedTasksState);
+                        if (closedTasksState.length > 200) {
+                            // Avoid reaching input_text's limit of 255 chars
+                            closedTasks.shift();
+                        }
+                        closedTasks.push(task.id);
+                        hass.callService("input_text", "set_value", {
+                            entity_id: INPUT_TEXT_ALL_CLOSED,
+                            value: JSON.stringify(closedTasks)
                         });
                     }
                 }, false);

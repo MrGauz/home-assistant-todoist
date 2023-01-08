@@ -10,4 +10,5 @@ CONF_PROJECT_NAME = "display_name"
 
 DEFAULT_ICON = "mdi:format-list-checkbox"
 
-INPUT_TEXT_ENTITY_ID = "input_text.todoist_closed_task"
+INPUT_TEXT_LAST_CLOSED = "input_text.todoist_last_closed_task"
+INPUT_TEXT_ALL_CLOSED = "input_text.todoist_all_closed_tasks"

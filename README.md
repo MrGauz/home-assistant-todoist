@@ -44,10 +44,17 @@ You will need some data from Todoist to continue:
          - project_id: 6747349569
            display_name: "Tasks for today" # Optional, overrides Todoist project's name
    
-   # You need this part for passing data from UI to sensor to close tasks
    input_text:
-     todoist_closed_task: # Don't change this line
-       name: "Todoist closed task" # This one you may change
+     # You need this input for passing data from UI to sensor to close tasks
+     todoist_last_closed_task: # Don't change this line
+       name: "Todoist last closed task" # This one you may change
+       max: 100
+       initial: ''
+     # A pool of closed tasks to display them as checked despite UI refreshes until sensor updates
+     todoist_all_closed_tasks: # Don't change this either
+       name: "Todoist all closed tasks"
+       max: 255 # This is the limit
+       initial: ''
    ``````
 
 4. Restart Home Assistant again, check the logs for errors, and give it some time to fetch the data.
