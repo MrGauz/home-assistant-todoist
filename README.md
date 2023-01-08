@@ -61,7 +61,6 @@ You will need some data from Todoist to continue:
 
    - If you are impatient, you can call the ``homeassistant.update_entity`` service on newly created sensors.
 
-
 ### Add the Lovelace card
 
 Having configured the sensor, it's time to setup the widget.
@@ -70,7 +69,7 @@ Having configured the sensor, it's time to setup the widget.
 
 2. Go to your Home Assistant dashboard, click "Edit dashboard" at the right top corner and after that in the same top right corner choose "Manage resources".
 
-3. Add new resource ``/local/todoist-card.js`` and click "Create". Go back to your dashboard and **hard-refresh the page**.
+3. Add new resource ``/local/todoist-card.js`` and click "Create". Go back to your dashboard, **empty cache, and hard-refresh the page**.
 
 4. Click "Add card", choose manual, and use the config below:
 

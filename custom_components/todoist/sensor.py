@@ -83,8 +83,9 @@ class TodoistSensor(SensorEntity):
         }
 
     def update(self):
-        self.project_name = self.project_name or self.fetch_project()[0]
-        self.project_url = self.fetch_project()[1]
+        project = self.fetch_project()
+        self.project_name = self.project_name or project[0]
+        self.project_url = project[1]
         self.tasks = self.fetch_tasks()
 
     def fetch_project(self) -> (str, str):
