@@ -54,14 +54,15 @@ class TodoistCard extends HTMLElement {
                 }
                 if (apiTask.due && apiTask.due.datetime != null) {
                     // Parse due time
-                    let parsedDate = new Date(apiTask.due.datetime);
-                    dueToText += ' ' + parsedDate.getHours() + ':' + parsedDate.getMinutes().toString().padStart(2, '0');
+                    let parsedTime = new Date(apiTask.due.datetime);
+                    dueToText += ' ' + parsedTime.getHours() + ':' + parsedTime.getMinutes().toString().padStart(2, '0');
                 }
 
                 const task = document.createElement('li');
                 task.id = apiTask.id;
                 task.classList.add('task');
-                if (apiTask.id === hass.states[INPUT_TEXT_ENTITY_ID].state) {
+                if (hass.states[INPUT_TEXT_ENTITY_ID].state
+                    && apiTask.id === hass.states[INPUT_TEXT_ENTITY_ID].state.split(':')[1]) {
                     task.classList.add('checked');
                 }
                 const taskInner = document.createElement('div');
@@ -85,7 +86,7 @@ class TodoistCard extends HTMLElement {
                         // Disallow unselecting a task ^
                         hass.callService("input_text", "set_value", {
                             entity_id: INPUT_TEXT_ENTITY_ID,
-                            value: task.id
+                            value: `${entityId}:${task.id}`
                         });
                     }
                 }, false);
@@ -218,7 +219,7 @@ class TodoistCard extends HTMLElement {
 
     // The height of the card.
     getCardSize() {
-        return 5; // TODO: adapt to # entities
+        return 5;
     }
 }
 

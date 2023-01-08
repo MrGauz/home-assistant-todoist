@@ -71,7 +71,7 @@ class TodoistSensor(SensorEntity):
 
     @property
     def unique_id(self) -> str:
-        return f"todoist_{self.project_id}_{self.project_name}_project"
+        return f"todoist_project_{self.project_id}"
 
     @property
     def extra_state_attributes(self):
@@ -81,7 +81,7 @@ class TodoistSensor(SensorEntity):
         }
 
     def update(self):
-        self.project_name = self.fetch_project()[0] or self.project_name
+        self.project_name = self.project_name or self.fetch_project()[0]
         self.project_url = self.fetch_project()[1]
         self.tasks = self.fetch_tasks()
 
@@ -107,16 +107,19 @@ class TodoistSensor(SensorEntity):
 
         @callback
         async def close_task(event):
-            close_task_id = self.hass.states.get(INPUT_TEXT_ENTITY_ID).state
-            if close_task_id:
+            state = self.hass.states.get(INPUT_TEXT_ENTITY_ID).state
+            if state:
+                close_task_sensor_id, close_task_id = state.split(':')
+
                 try:
                     await self.hass.async_add_executor_job(close_task_api, close_task_id)
                 except Exception as e:
                     _LOGGER.error("ERROR async_update(): " + str(e))
                     return
 
-                await self.hass.async_add_executor_job(self.hass.services.call, 'homeassistant', 'update_entity',
-                                                       {"entity_id": "sensor.test_project"})
+                await self.hass.async_add_executor_job(
+                    self.hass.services.call, 'homeassistant', 'update_entity', {"entity_id": close_task_sensor_id}
+                )
 
         self.async_on_remove(
             async_track_state_change_event(
