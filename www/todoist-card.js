@@ -275,6 +275,7 @@ class TodoistCard extends HTMLElement {
                 align-items: flex-start;
                 gap: 20px;
                 line-height: 1.2em;
+                word-break: break-word;
             }
 
             .due-date {
