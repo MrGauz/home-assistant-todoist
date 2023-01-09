@@ -121,7 +121,11 @@ class TodoistCard extends HTMLElement {
                         // Disallow unselecting a task ^
 
                         // Pass data to sensor to close the task
-                        const lastClosed = {"task_id": task.id, "sensor_id": entityId};
+                        const lastClosed = {
+                            "task_id": task.id,
+                            "sensor_id": entityId,
+                            "project_id": entity.attributes.project_id
+                        };
                         hass.callService("input_text", "set_value", {
                             entity_id: INPUT_TEXT_LAST_CLOSED,
                             value: JSON.stringify(lastClosed)

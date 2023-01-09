@@ -135,6 +135,10 @@ class TodoistSensor(SensorEntity):
             if state:
                 last_closed = json.loads(state)
 
+                # Avoid multiple API calls if multiple sensors are defined
+                if last_closed['project_id'] != str(self.project_id):
+                    return
+
                 try:
                     await self.hass.async_add_executor_job(close_task_api, last_closed['task_id'])
                 except Exception as e:
@@ -151,11 +155,7 @@ class TodoistSensor(SensorEntity):
             except Exception as e:
                 _LOGGER.error(f"Could not close task {task_id}", e)
 
-        self.async_on_remove(
-            async_track_state_change_event(
-                self.hass, [INPUT_TEXT_LAST_CLOSED], close_task
-            )
-        )
+        async_track_state_change_event(self.hass, INPUT_TEXT_LAST_CLOSED, close_task)
 
         # Add newly created tasks
         @callback
@@ -163,6 +163,10 @@ class TodoistSensor(SensorEntity):
             state = self.hass.states.get(INPUT_TEXT_NEW_TASK).state
             if state:
                 new_task = json.loads(state)
+
+                # Avoid multiple API calls if multiple sensors are defined
+                if new_task['project_id'] != str(self.project_id):
+                    return
 
                 try:
                     await self.hass.async_add_executor_job(add_task_api, new_task['content'], new_task['project_id'])
@@ -174,14 +178,10 @@ class TodoistSensor(SensorEntity):
                     self.hass.services.call, 'homeassistant', 'update_entity', {"entity_id": new_task['sensor_id']}
                 )
 
-        self.async_on_remove(
-            async_track_state_change_event(
-                self.hass, [INPUT_TEXT_NEW_TASK], add_task
-            )
-        )
-
         def add_task_api(content: str, project_id: str) -> None:
             try:
                 self.api.add_task(content=content, project_id=project_id)
             except Exception as e:
                 _LOGGER.error(f"Could not add new task to project {project_id}", e)
+
+        async_track_state_change_event(self.hass, INPUT_TEXT_NEW_TASK, add_task)
