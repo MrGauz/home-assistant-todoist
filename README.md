@@ -55,6 +55,11 @@ You will need some data from Todoist to continue:
        name: "Todoist all closed tasks"
        max: 255 # This is the limit
        initial: ''
+     # Information about the added task
+     todoist_new_task: # Neither should you change this one
+       name: "Todoist new task"
+       max: 255
+       initial: ''
    ``````
 
 4. Restart Home Assistant again, check the logs for errors, and give it some time to fetch the data.
@@ -77,8 +82,9 @@ Having configured the sensor, it's time to setup the widget.
    type: custom:todoist-card
    entities:
      - sensor.tasks_for_today # Swap to your sensor ID
-       max_entries: 10 # Optional, number of tasks to show (default: 10)
-       show_project_name: true # Optional, show or hide the project name (default: true)
+    max_entries: 8 # Optional, number of tasks to show (default: 10)
+    show_project_name: true # Optional, show or hide the project name (default: true)
+    show_input_area: false # Optional, show or hide the area for adding a new task (default: true)
    ``````
 
 ## 🎨 Styling

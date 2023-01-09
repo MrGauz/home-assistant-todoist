@@ -20,7 +20,8 @@ from .const import (
     CONF_PROJECT_NAME,
     DEFAULT_ICON,
     INPUT_TEXT_LAST_CLOSED,
-    INPUT_TEXT_ALL_CLOSED
+    INPUT_TEXT_ALL_CLOSED,
+    INPUT_TEXT_NEW_TASK
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -78,24 +79,23 @@ class TodoistSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         return {
-            "project_url": self.project_url,
+            "project_id": str(self.project_id),
             "tasks": [task.to_dict() for task in self.tasks or []],
         }
 
     def update(self):
-        project = self.fetch_project()
-        self.project_name = self.project_name or project[0]
-        self.project_url = project[1]
+        if self.project_name.startswith('Project ID'):
+            # ^ Disable custom display name overrides
+            self.project_name = self.fetch_project_name()
         self.tasks = self.fetch_tasks()
 
-    def fetch_project(self) -> (str, str):
-        """Load Todoist project's name and URL"""
+    def fetch_project_name(self) -> str:
+        """Load Todoist project's name"""
         try:
-            project = self.api.get_project(project_id=self.project_id)
-            return project.name, project.url
+            return self.api.get_project(project_id=self.project_id).name
         except Exception as e:
             _LOGGER.warning(f"Could not load a project with id {self.project_id}", e)
-            return '', ''
+            return ''
 
     def fetch_tasks(self) -> list[Task]:
         """Load Todoist project's tasks"""
@@ -125,8 +125,10 @@ class TodoistSensor(SensorEntity):
         return tasks
 
     async def async_added_to_hass(self) -> None:
-        """Complete integration setup after being added to hass."""
+        """Complete integration setup after being added to hass.
+        Used for adding state change listeners for closed/added tasks"""
 
+        # Close selected tasks
         @callback
         async def close_task(event):
             state = self.hass.states.get(INPUT_TEXT_LAST_CLOSED).state
@@ -143,14 +145,43 @@ class TodoistSensor(SensorEntity):
                     self.hass.services.call, 'homeassistant', 'update_entity', {"entity_id": last_closed['sensor_id']}
                 )
 
+        def close_task_api(task_id: str) -> None:
+            try:
+                self.api.close_task(task_id=task_id)
+            except Exception as e:
+                _LOGGER.error(f"Could not close task {task_id}", e)
+
         self.async_on_remove(
             async_track_state_change_event(
                 self.hass, [INPUT_TEXT_LAST_CLOSED], close_task
             )
         )
 
-        def close_task_api(task_id: str) -> None:
+        # Add newly created tasks
+        @callback
+        async def add_task(event):
+            state = self.hass.states.get(INPUT_TEXT_NEW_TASK).state
+            if state:
+                new_task = json.loads(state)
+
+                try:
+                    await self.hass.async_add_executor_job(add_task_api, new_task['content'], new_task['project_id'])
+                except Exception as e:
+                    _LOGGER.error(f"Could not add new task to project {new_task['project_id']}", e)
+                    return
+
+                await self.hass.async_add_executor_job(
+                    self.hass.services.call, 'homeassistant', 'update_entity', {"entity_id": new_task['sensor_id']}
+                )
+
+        self.async_on_remove(
+            async_track_state_change_event(
+                self.hass, [INPUT_TEXT_NEW_TASK], add_task
+            )
+        )
+
+        def add_task_api(content: str, project_id: str) -> None:
             try:
-                self.api.close_task(task_id=task_id)
+                self.api.add_task(content=content, project_id=project_id)
             except Exception as e:
-                _LOGGER.error(f"Could not close task {task_id}", e)
+                _LOGGER.error(f"Could not add new task to project {project_id}", e)

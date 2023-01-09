@@ -2,6 +2,8 @@
 
 const INPUT_TEXT_LAST_CLOSED = 'input_text.todoist_last_closed_task';
 const INPUT_TEXT_ALL_CLOSED = 'input_text.todoist_all_closed_tasks';
+const INPUT_TEXT_NEW_TASK = 'input_text.todoist_new_task';
+const TODOIST_PROJECT_LINK = 'https://todoist.com/app/project/';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 class TodoistCard extends HTMLElement {
@@ -16,7 +18,8 @@ class TodoistCard extends HTMLElement {
     set hass(hass) {
         const config = this.config;
         const maxEntries = config.max_entries || 10;
-        const showProjectName = config.show_project_name || true;
+        const showProjectName = (config.show_project_name == null) ? true : config.show_project_name;
+        const showInputArea = (config.show_input_area == null) ? true : config.show_input_area;
         const entityIds = config.entity ? [config.entity] : config.entities || [];
 
         const root = this.shadowRoot.getElementById('container');
@@ -28,24 +31,54 @@ class TodoistCard extends HTMLElement {
                 throw new Error("Entity State Unavailable");
             }
 
+            // Title
             if (showProjectName) {
                 const projectName = document.createElement('div');
                 projectName.className = 'project';
                 projectName.innerText = entity.attributes.friendly_name;
 
-                if (entity.attributes.project_url) {
-                    projectName.addEventListener('click', function () {
-                        window.open(entity.attributes.project_url, '_blank').focus();
-                    });
-                }
+                projectName.addEventListener('click', function () {
+                    window.open(TODOIST_PROJECT_LINK + entity.attributes.project_id, '_blank').focus();
+                });
 
                 root.appendChild(projectName);
             }
 
+            // New task input
+            if (showInputArea) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = 'Add a task...';
+                input.className = 'task-input';
+                const addButton = document.createElement('button');
+                addButton.innerText = '+';
+                addButton.className = 'task-input-btn';
+                addButton.addEventListener('click', event => {
+                    if (input.value) {
+                        hass.callService("input_text", "set_value", {
+                            entity_id: INPUT_TEXT_NEW_TASK,
+                            value: JSON.stringify({
+                                "project_id": entity.attributes.project_id,
+                                "sensor_id": entityId,
+                                "content": input.value
+                                    .slice(0, 255 - 45 - entity.attributes.project_id.length - entityId.length)
+                                // Input text fields are limited to 255 chars ^
+                            })
+                        });
+                    }
+                });
+
+                const inputArea = document.createElement('div');
+                inputArea.className = 'task-input-area';
+                inputArea.appendChild(input);
+                inputArea.appendChild(addButton);
+                root.appendChild(inputArea);
+            }
+
+            // Tasks
             const tasks = document.createElement('ul');
             tasks.className = 'tasks';
             tasks.id = 'todoist-tasks-' + entityId;
-
             entity.attributes.tasks.slice(0, maxEntries).forEach(apiTask => {
                 let dueToText = '';
                 if (apiTask.due && apiTask.due.date) {
@@ -145,11 +178,35 @@ class TodoistCard extends HTMLElement {
                 text-align: left;
                 padding: 10px 10px 5px 5px;
             }
+            
+            .task-input-area {
+                padding-top: 15px;
+                padding-bottom: 5px;
+                padding-inline-start: 20px;
+                padding-inline-end: 20px;
+                display: flex;
+                align-items: center;
+            }
+            
+            .task-input {
+                margin-right: 10px;
+                padding: 10px 10px 5px 5px;
+                line-height: 30px;
+                width: 85%;
+                font-size: 130%;
+            }
+            
+            .task-input-btn {
+                font-size: 400%;
+                opacity: 0.8;
+                line-height: 40px;
+                padding: 0 3px;
+            }
 
             .tasks {
                 width: 100%;
                 font-weight: 400;
-                font-size:120%;
+                font-size: 120%;
                 line-height: 1.5em;
                 padding-bottom: 20px;
                 padding-inline-start: 20px;

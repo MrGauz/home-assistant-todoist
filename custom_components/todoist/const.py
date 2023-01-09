@@ -12,3 +12,4 @@ DEFAULT_ICON = "mdi:format-list-checkbox"
 
 INPUT_TEXT_LAST_CLOSED = "input_text.todoist_last_closed_task"
 INPUT_TEXT_ALL_CLOSED = "input_text.todoist_all_closed_tasks"
+INPUT_TEXT_NEW_TASK = 'input_text.todoist_new_task'
