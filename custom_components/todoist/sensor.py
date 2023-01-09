@@ -59,14 +59,15 @@ class TodoistSensor(SensorEntity):
         self.hass: HomeAssistant = hass
         self.config: dict = config
         self.project_id = config.get(CONF_PROJECT_ID)
-        self.project_name = config.get(CONF_PROJECT_NAME)
+        self.project_name = f"Project ID: {self.project_id}"
+        self.project_display_name = config.get(CONF_PROJECT_NAME)
         self.project_url = ''
         self.api_token = api_token
         self.api = TodoistAPI(api_token)
 
     @property
     def name(self) -> str:
-        return self.project_name or f"Project ID: {self.project_id}"
+        return self.project_display_name or self.project_name
 
     @property
     def icon(self) -> str:
@@ -84,8 +85,8 @@ class TodoistSensor(SensorEntity):
         }
 
     def update(self):
-        if self.project_name.startswith('Project ID'):
-            # ^ Disable custom display name overrides
+        if not self.project_display_name:
+            # Otherwise no need for an extra API call
             self.project_name = self.fetch_project_name()
         self.tasks = self.fetch_tasks()
 
