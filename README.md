@@ -80,12 +80,13 @@ Having configured the sensor, it's time to setup the widget.
 
    ``````yaml
    type: custom:todoist-card
-   entities:
-     - sensor.tasks_for_today # Swap to your sensor ID
-    max_entries: 8 # Optional, number of tasks to show (default: 10)
-    show_project_name: true # Optional, show or hide the project name (default: true)
-    show_input_area: false # Optional, show or hide the area for adding a new task (default: true)
+   entity_id: sensor.tasks_for_today # Swap to your sensor ID
+   max_entries: 8 # Optional, number of tasks to show (default: 10)
+   show_project_name: true # Optional, show or hide the project name (default: true)
+   show_input_area: false # Optional, show or hide the area for adding a new task (default: true)
    ``````
+
+You can of course add multiple cards to display multiple projects.
 
 ## 🎨 Styling
 

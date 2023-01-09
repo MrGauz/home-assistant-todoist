@@ -20,137 +20,134 @@ class TodoistCard extends HTMLElement {
         const maxEntries = config.max_entries || 10;
         const showProjectName = (config.show_project_name == null) ? true : config.show_project_name;
         const showInputArea = (config.show_input_area == null) ? true : config.show_input_area;
-        const entityIds = config.entity ? [config.entity] : config.entities || [];
 
         const root = this.shadowRoot.getElementById('container');
         root.innerHTML = '';
 
-        for (const entityId of entityIds) {
-            const entity = hass.states[entityId];
-            if (!entity) {
-                throw new Error("Entity State Unavailable");
-            }
+        const entity = hass.states[config.entity_id];
+        if (!entity) {
+            throw new Error("Entity State Unavailable");
+        }
 
-            // Title
-            if (showProjectName) {
-                const projectName = document.createElement('div');
-                projectName.className = 'project';
-                projectName.innerText = entity.attributes.friendly_name;
+        // Title
+        if (showProjectName) {
+            const projectName = document.createElement('div');
+            projectName.className = 'project';
+            projectName.innerText = entity.attributes.friendly_name;
 
-                projectName.addEventListener('click', function () {
-                    window.open(TODOIST_PROJECT_LINK + entity.attributes.project_id, '_blank').focus();
-                });
-
-                root.appendChild(projectName);
-            }
-
-            // New task input
-            if (showInputArea) {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.placeholder = 'Add a task...';
-                input.className = 'task-input';
-                const addButton = document.createElement('button');
-                addButton.innerText = '+';
-                addButton.className = 'task-input-btn';
-                addButton.addEventListener('click', event => {
-                    if (input.value) {
-                        hass.callService("input_text", "set_value", {
-                            entity_id: INPUT_TEXT_NEW_TASK,
-                            value: JSON.stringify({
-                                "project_id": entity.attributes.project_id,
-                                "sensor_id": entityId,
-                                "content": input.value
-                                    .slice(0, 255 - 45 - entity.attributes.project_id.length - entityId.length)
-                                // Input text fields are limited to 255 chars ^
-                            })
-                        });
-                    }
-                });
-
-                const inputArea = document.createElement('div');
-                inputArea.className = 'task-input-area';
-                inputArea.appendChild(input);
-                inputArea.appendChild(addButton);
-                root.appendChild(inputArea);
-            }
-
-            // Tasks
-            const tasks = document.createElement('ul');
-            tasks.className = 'tasks';
-            tasks.id = 'todoist-tasks-' + entityId;
-            entity.attributes.tasks.slice(0, maxEntries).forEach(apiTask => {
-                let dueToText = '';
-                if (apiTask.due && apiTask.due.date) {
-                    // Parse due date
-                    let parsedDate = new Date(apiTask.due.date);
-                    dueToText += parsedDate.getDate() + ' ' + MONTHS[parsedDate.getMonth()];
-                }
-                if (apiTask.due && apiTask.due.datetime != null) {
-                    // Parse due time
-                    let parsedTime = new Date(apiTask.due.datetime);
-                    dueToText += ' ' + parsedTime.getHours() + ':' + parsedTime.getMinutes().toString().padStart(2, '0');
-                }
-
-                const task = document.createElement('li');
-                task.id = apiTask.id;
-                task.classList.add('task');
-
-                const closedTasks = JSON.parse(hass.states[INPUT_TEXT_ALL_CLOSED].state || '[]');
-                if (closedTasks.includes(apiTask.id)) {
-                    task.classList.add('checked');
-                }
-                const taskInner = document.createElement('div');
-
-                const text = document.createElement('div');
-                text.innerText = apiTask.content;
-                taskInner.appendChild(text);
-
-                if (dueToText) {
-                    const dueTo = document.createElement('div');
-                    dueTo.className = 'due-date';
-                    dueTo.innerText = dueToText;
-                    taskInner.appendChild(dueTo);
-                }
-
-                task.appendChild(taskInner);
-
-                task.addEventListener('click', event => {
-                    const task = event.target.closest('.task');
-                    if (task && !task.classList.contains('checked')) {
-                        // Disallow unselecting a task ^
-
-                        // Pass data to sensor to close the task
-                        const lastClosed = {
-                            "task_id": task.id,
-                            "sensor_id": entityId,
-                            "project_id": entity.attributes.project_id
-                        };
-                        hass.callService("input_text", "set_value", {
-                            entity_id: INPUT_TEXT_LAST_CLOSED,
-                            value: JSON.stringify(lastClosed)
-                        });
-
-                        // Add task_id to closed tasks' pool to display as checked despite UI refreshes
-                        const closedTasksState = hass.states[INPUT_TEXT_ALL_CLOSED].state || '[]';
-                        let closedTasks = JSON.parse(closedTasksState);
-                        if (closedTasksState.length > 200) {
-                            // Avoid reaching input_text's limit of 255 chars
-                            closedTasks.shift();
-                        }
-                        closedTasks.push(task.id);
-                        hass.callService("input_text", "set_value", {
-                            entity_id: INPUT_TEXT_ALL_CLOSED,
-                            value: JSON.stringify(closedTasks)
-                        });
-                    }
-                }, false);
-
-                tasks.appendChild(task);
+            projectName.addEventListener('click', function () {
+                window.open(TODOIST_PROJECT_LINK + entity.attributes.project_id, '_blank').focus();
             });
 
-            root.appendChild(tasks);
+            root.appendChild(projectName);
         }
+
+        // New task input
+        if (showInputArea) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Add a task...';
+            input.className = 'task-input';
+            const addButton = document.createElement('button');
+            addButton.innerText = '+';
+            addButton.className = 'task-input-btn';
+            addButton.addEventListener('click', event => {
+                if (input.value) {
+                    hass.callService("input_text", "set_value", {
+                        entity_id: INPUT_TEXT_NEW_TASK,
+                        value: JSON.stringify({
+                            "project_id": entity.attributes.project_id,
+                            "sensor_id": config.entity_id,
+                            "content": input.value
+                                .slice(0, 255 - 45 - entity.attributes.project_id.length - config.entity_id.length)
+                            // Input text fields are limited to 255 chars ^
+                        })
+                    });
+                }
+            });
+
+            const inputArea = document.createElement('div');
+            inputArea.className = 'task-input-area';
+            inputArea.appendChild(input);
+            inputArea.appendChild(addButton);
+            root.appendChild(inputArea);
+        }
+
+        // Tasks
+        const tasks = document.createElement('ul');
+        tasks.className = 'tasks';
+        tasks.id = 'todoist-tasks-' + config.entity_id;
+        entity.attributes.tasks.slice(0, maxEntries).forEach(apiTask => {
+            let dueToText = '';
+            if (apiTask.due && apiTask.due.date) {
+                // Parse due date
+                let parsedDate = new Date(apiTask.due.date);
+                dueToText += parsedDate.getDate() + ' ' + MONTHS[parsedDate.getMonth()];
+            }
+            if (apiTask.due && apiTask.due.datetime != null) {
+                // Parse due time
+                let parsedTime = new Date(apiTask.due.datetime);
+                dueToText += ' ' + parsedTime.getHours() + ':' + parsedTime.getMinutes().toString().padStart(2, '0');
+            }
+
+            const task = document.createElement('li');
+            task.id = apiTask.id;
+            task.classList.add('task');
+
+            const closedTasks = JSON.parse(hass.states[INPUT_TEXT_ALL_CLOSED].state || '[]');
+            if (closedTasks.includes(apiTask.id)) {
+                task.classList.add('checked');
+            }
+            const taskInner = document.createElement('div');
+
+            const text = document.createElement('div');
+            text.innerText = apiTask.content;
+            taskInner.appendChild(text);
+
+            if (dueToText) {
+                const dueTo = document.createElement('div');
+                dueTo.className = 'due-date';
+                dueTo.innerText = dueToText;
+                taskInner.appendChild(dueTo);
+            }
+
+            task.appendChild(taskInner);
+
+            task.addEventListener('click', event => {
+                const task = event.target.closest('.task');
+                if (task && !task.classList.contains('checked')) {
+                    // Disallow unselecting a task ^
+
+                    // Pass data to sensor to close the task
+                    const lastClosed = {
+                        "task_id": task.id,
+                        "sensor_id": config.entity_id,
+                        "project_id": entity.attributes.project_id
+                    };
+                    hass.callService("input_text", "set_value", {
+                        entity_id: INPUT_TEXT_LAST_CLOSED,
+                        value: JSON.stringify(lastClosed)
+                    });
+
+                    // Add task_id to closed tasks' pool to display as checked despite UI refreshes
+                    const closedTasksState = hass.states[INPUT_TEXT_ALL_CLOSED].state || '[]';
+                    let closedTasks = JSON.parse(closedTasksState);
+                    if (closedTasksState.length > 200) {
+                        // Avoid reaching input_text's limit of 255 chars
+                        closedTasks.shift();
+                    }
+                    closedTasks.push(task.id);
+                    hass.callService("input_text", "set_value", {
+                        entity_id: INPUT_TEXT_ALL_CLOSED,
+                        value: JSON.stringify(closedTasks)
+                    });
+                }
+            }, false);
+
+            tasks.appendChild(task);
+        });
+
+        root.appendChild(tasks);
     }
 
     /* This is called only when config is updated */
