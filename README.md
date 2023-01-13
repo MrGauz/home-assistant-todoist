@@ -17,8 +17,6 @@ The component consists of two parts:
 
 We will look at the installation of each of them separately below.
 
-> TODO: test if HACS necessary
-
 #### Todoist
 
 You will need some data from Todoist to continue:
@@ -84,6 +82,8 @@ Having configured the sensor, it's time to setup the widget.
    max_entries: 8 # Optional, number of tasks to show (default: 10)
    show_project_name: true # Optional, show or hide the project name (default: true)
    show_input_area: false # Optional, show or hide the area for adding a new task (default: true)
+   show_tasks: true # Optional, show or hide the tasks list (default: true)
+   # ^ Might be useful if you only want to be able to add new tasks to a certain project (e.g. grocery list)
    ``````
 
 You can of course add multiple cards to display multiple projects.
