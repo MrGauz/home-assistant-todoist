@@ -108,7 +108,8 @@ class TodoistSensor(SensorEntity):
 
         # First show those without a due date, then sorted by due date
         tasks_undue = list(filter(lambda t: not t.due, tasks))
-        tasks_due = sorted(list(filter(lambda t: t.due, tasks)), key=lambda t: (t.due.date, t.due.datetime))
+        tasks_due = sorted(list(filter(lambda t: t.due, tasks)),
+                           key=lambda t: (t.due.date, t.due.datetime if t.due.datetime is not None else '0'))
         tasks = [*tasks_undue, *tasks_due]
 
         # Close tasks in case original API call failed

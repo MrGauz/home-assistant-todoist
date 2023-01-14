@@ -80,18 +80,6 @@ class TodoistCard extends HTMLElement {
             tasks.className = 'tasks';
             tasks.id = 'todoist-tasks-' + config.entity_id;
             entity.attributes.tasks.slice(0, maxEntries).forEach(apiTask => {
-                let dueToText = '';
-                if (apiTask.due && apiTask.due.date) {
-                    // Parse due date
-                    let parsedDate = new Date(apiTask.due.date);
-                    dueToText += parsedDate.getDate() + ' ' + MONTHS[parsedDate.getMonth()];
-                }
-                if (apiTask.due && apiTask.due.datetime != null) {
-                    // Parse due time
-                    let parsedTime = new Date(apiTask.due.datetime);
-                    dueToText += ' ' + parsedTime.getHours() + ':' + parsedTime.getMinutes().toString().padStart(2, '0');
-                }
-
                 const task = document.createElement('li');
                 task.id = apiTask.id;
                 task.classList.add('task');
@@ -105,6 +93,24 @@ class TodoistCard extends HTMLElement {
                 const text = document.createElement('div');
                 text.innerText = apiTask.content;
                 taskInner.appendChild(text);
+
+                let dueToText = '';
+                if (apiTask.due && apiTask.due.date) {
+                    // Parse due date
+                    let parsedDate = new Date(apiTask.due.date);
+                    parsedDate.setHours(0, 0, 0, 0)
+                    dueToText += parsedDate.getDate() + ' ' + MONTHS[parsedDate.getMonth()];
+
+                    // Highlight tasks that are due today or overdue
+                    if (parsedDate <= new Date().setHours(0, 0, 0, 0)) {
+                        task.classList.add('due-now');
+                    }
+                }
+                if (apiTask.due && apiTask.due.datetime != null) {
+                    // Parse due time
+                    let parsedTime = new Date(apiTask.due.datetime);
+                    dueToText += ' ' + parsedTime.getHours() + ':' + parsedTime.getMinutes().toString().padStart(2, '0');
+                }
 
                 if (dueToText) {
                     const dueTo = document.createElement('div');
@@ -222,8 +228,6 @@ class TodoistCard extends HTMLElement {
                 position: relative;
                 padding: 12px 8px 12px 40px;
                 transition: 0.2s;
-
-                /* make the list items unselectable */
                 -webkit-user-select: none;
                 -moz-user-select: none;
                 -ms-user-select: none;
@@ -285,6 +289,11 @@ class TodoistCard extends HTMLElement {
             .due-date {
                 font-size: 75%;
                 opacity: 0.7;
+            }
+            
+            .due-now {
+                background: #ff5967 !important;
+                color: #171717;
             }
         `;
 
